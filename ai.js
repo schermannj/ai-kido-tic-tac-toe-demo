@@ -159,9 +159,19 @@ const pattern_properties = ({ space, weight = 1, name }) => ({
       Object.defineProperty(this, 'invalid', { value: true });
     }
   },
+  count_filled_cell: {
+    value: function () {
+      return this.filter(it => it.meta.content !== this.meta.space).length;
+    }
+  },
+  count_empty_cell: {
+    value: function () {
+      return this.length - this.count_filled_cell();
+    }
+  },
   saturation: {
     value: function () {
-      return this.filter(it => it.meta.content !== this.meta.space).length / this.length;
+      return this.count_filled_cell() / this.length;
     }
   },
   score: {
@@ -255,8 +265,8 @@ const { track } = __webpack_require__(4);
 module.exports = ({ ai_cursor, player_cursor, space = null }) => board => pipe(values, filter(it => it), sortBy(it => it.score * -1), track('all thoughts'), head, get('thought'))({
   r: random()(0.1)({ board, cursor: ai_cursor, space }),
   center: center()(5)({ board, cursor: ai_cursor, space }),
-  defence: pattern('defence')(1.5)({ board, cursor: player_cursor, space }),
-  offence: pattern('offence')(1.2)({ board, cursor: ai_cursor, space })
+  defence: pattern('defence')(1.2)({ board, cursor: player_cursor, space }),
+  offence: pattern('offence')(1.5)({ board, cursor: ai_cursor, space })
 });
 
 /***/ }),
@@ -1446,6 +1456,7 @@ const get_borders = board => [board[0].length, board.length];
 
 module.exports = (name = 'pattern') => (factor = 0.6) => ({ board, cursor, space }) => pipe(() => [...get_free_cells({ board, space }), ...get_free_cells({ board, space: cursor })], available_positions => map(map_available_positions({ board, space, available_positions }))(available_positions), flatten, filter(it => !it.invalid), // filter out patterns that are out of the borders
 filter(it => it.saturation() !== 1), // filter out full patterns
+filter(it => it.count_empty_cell() <= 2), // filter out patterns with 2 or more steps
 sortBy(it => it.score() * -1), // sort desc
 head, map_move(space), map_thought(name)(factor))();
 
